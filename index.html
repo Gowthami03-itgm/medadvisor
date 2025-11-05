@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedAdvisor</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <style>
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: linear-gradient(135deg, #74ebd5 0%, #ACB6E5 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+    }
+    .container {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 2rem 2.5rem;
+      width: 100%;
+      max-width: 600px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      text-align: center;
+      animation: fadeIn 1s ease-in-out;
+    }
+    h1 {
+      color: #fff;
+      font-size: 2.2rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      color: #f1f1f1;
+      margin-bottom: 1.5rem;
+    }
+    .autocomplete-container {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+    #suggestions {
+      list-style: none;
+      position: absolute;
+      top: 100%; left: 0; right: 0;
+      background: #fff;
+      border-radius: 10px;
+      margin-top: 0.3rem;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      overflow: hidden;
+      z-index: 10;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    #suggestions li {
+      padding: 0.7rem 1rem;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.2s;
+      animation: slideIn 0.3s ease;
+    }
+    #suggestions li:hover {
+      background: #74ebd5;
+      color: #fff;
+      transform: translateX(5px);
+    }
+    .chip {
+      display: inline-block;
+      background: #0077cc;
+      color: #fff;
+      padding: 0.4rem 0.8rem;
+      border-radius: 15px;
+      margin: 0.3rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    .chip:hover {
+      background: #005fa3;
+      transform: scale(1.05);
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.8rem 2rem;
+      background: #fff;
+      color: #0077cc;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #0077cc;
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+      transform: translateY(-2px);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px);}
+      to { opacity: 1; transform: translateX(0);}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MedAdvisor</h1>
+    <p>Type your symptoms below</p>
+
+    <div class="autocomplete-container">
+      <input type="text" id="symptomInput" placeholder="Start typing a symptom..."/>
+      <ul id="suggestions"></ul>
+    </div>
+
+    <div id="selectedSymptoms"></div>
+
+    <form id="predictForm" method="POST" action="/predict">
+      <input type="hidden" name="symptoms" id="hiddenSymptoms"/>
+      <button type="submit">Predict</button>
+    </form>
+  </div>
+
+  <script>
+    let symptoms = [];
+    let selected = [];
+
+    async function loadSymptoms() {
+      const res = await fetch("/symptoms");
+      symptoms = await res.json();
+    }
+
+    function renderSelected() {
+      const div = document.getElementById("selectedSymptoms");
+      div.innerHTML = "";
+      selected.forEach((sym, idx) => {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = sym;
+        chip.title = "Click to remove";
+        chip.onclick = () => { selected.splice(idx,1); renderSelected(); };
+        div.appendChild(chip);
+      });
+      document.getElementById("hiddenSymptoms").value = selected.join(",");
+    }
+
+    document.getElementById("symptomInput").addEventListener("input", e => {
+      const val = e.target.value.toLowerCase();
+      const list = symptoms.filter(s => s.toLowerCase().includes(val));
+      const ul = document.getElementById("suggestions");
+      ul.innerHTML = "";
+      if (val.length > 0) {
+        list.slice(0,5).forEach(s => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          li.onclick = () => {
+            if (!selected.includes(s)) {
+              selected.push(s);
+              renderSelected();
+            }
+            e.target.value = "";
+            ul.innerHTML = "";
+          };
+          ul.appendChild(li);
+        });
+      }
+    });
+
+    loadSymptoms();
+  </script>
+</body>
+</html>
